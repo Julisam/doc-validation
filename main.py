@@ -1,35 +1,44 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+# from fastapi import FastAPI, File, UploadFile, HTTPException, Form
+from fastapi import FastAPI, HTTPException
 import os 
+from typing import Dict, List, Optional
+import base64
+
 import sys
 sys.path.append(os.getcwd())
 
 # Import text extraction and LLM functions from the modularized app
 from app.extraction import extract_text_from_pdf, extract_text_from_image
-from app.llm import classify_and_extract_birth_certificate
+from app.llm import generate_response
+from app.validation import validate
+
+from app.model import DocumentExtractionRequest
+from app.prompt import engineer_prompt
 
 app = FastAPI()
 
+
 @app.post("/extract/")
-async def extract_text(file: UploadFile = File(...)):
+async def extract_text(payload: DocumentExtractionRequest):
     """
-    Endpoint to extract text from an uploaded document and classify it as a birth certificate.
+    Endpoint to extract text from an uploaded document and evaluate it.
     
-    Parameters:
-    - file (UploadFile): The document file uploaded by the client (PDF or PNG).
+    Args:
+        - payload (DocumentExtractionRequest): The request payload containing document details.
 
     Returns:
-    - JSON object containing:
-        - 'document_type': Type of the document (e.g., 'birth_certificate' or 'unknown').
-        - 'fields': Extracted fields if the document is a birth certificate.
-    
-    Raises:
-    - HTTPException with status code 400 if the file type is unsupported.
-    - HTTPException with status code 500 if any error occurs during processing.
+        - JSON object containing:
+            - 'document_type': Type of the document (e.g., 'birth_certificate' or 'unknown').
+            - 'fields': Extracted fields if the document is a birth certificate.
+        
+        Raises:
+        - HTTPException with status code 400 if the file type is unsupported.
+        - HTTPException with status code 500 if any error occurs during processing.
     """
     try:
-        contents = await file.read()
-
-        content_type = file.content_type
+        # Decode file content from base64
+        contents = base64.b64decode(payload.FileContent)
+        content_type = payload.MimeType
         
         # Extract text from the document
         if content_type == "image/png":
@@ -42,10 +51,19 @@ async def extract_text(file: UploadFile = File(...)):
         else:
             raise HTTPException(status_code=400, detail="Only Image and PDF files are supported.")
         
-        # Use the LLM to classify the document and extract relevant fields
-        output = classify_and_extract_birth_certificate(text)
+        # return text
+    
+        # Engineer prompt
+        prompt = engineer_prompt(payload=payload, text=text)
 
-        return output
+        # Use the LLM to extract relevant fields
+        response = generate_response(prompt)
+
+        # # Validate the response
+        # validate(response)
+
+        return response
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
