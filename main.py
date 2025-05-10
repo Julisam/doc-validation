@@ -17,7 +17,6 @@ from app.prompt import engineer_prompt
 
 app = FastAPI()
 
-
 @app.post("/extract/")
 async def extract_text(payload: DocumentExtractionRequest):
     """
@@ -36,9 +35,15 @@ async def extract_text(payload: DocumentExtractionRequest):
         - HTTPException with status code 500 if any error occurs during processing.
     """
     try:
-        # Decode file content from base64
-        contents = base64.b64decode(payload.FileContent)
+        # # Decode file content from base64
+        # contents = base64.b64decode(payload.FileContent)
         content_type = payload.MimeType
+
+        # Use local file for testing
+        pdf_file = '/Users/jay/projects/doc-validation/ocr_Friendly_birth_cert.pdf'
+        with open(pdf_file, 'rb') as f:
+            contents = f.read()
+
         
         # Extract text from the document
         if content_type == "image/png":
@@ -50,11 +55,13 @@ async def extract_text(payload: DocumentExtractionRequest):
         # Raise an error if the file type is not supported
         else:
             raise HTTPException(status_code=400, detail="Only Image and PDF files are supported.")
-        
+
         # return text
     
         # Engineer prompt
         prompt = engineer_prompt(payload=payload, text=text)
+
+        # return(prompt)
 
         # Use the LLM to extract relevant fields
         response = generate_response(prompt)

@@ -1,0 +1,51 @@
+{
+    "document_type": "Birth Certificate",
+    "extracted_fields": [
+        {
+            "field_name": "FullName",
+            "extracted_value": "Adewale Ayuba",
+            "rules_check": [
+                {
+                    "name_match": "pass"
+                }
+            ],
+            "confidence_score": 0.2,
+            "rules": []
+        },
+        {
+            "field_name": "DateOfBirth",
+            "extracted_value": "11-12-2009",
+            "rules_check": [
+                {
+                    "date_match": "fail"
+                },
+                {
+                    "over_18": "fail"
+                }
+            ],
+            "confidence_score": 0.1,
+            "rules": []
+        },
+        {
+            "field_name": "IssuingAuthority",
+            "extracted_value": "Federal Government of Nigeria",
+            "rules_check": [
+                {
+                    "name_match": "pass"
+                }
+            ],
+            "confidence_score": 0.8,
+            "rules": []
+        },
+        {
+            "field_name": "PlaceOfBirth",
+            "extracted_value": "some value",
+            "rules_check": [],
+            "confidence_score": 0.8,
+            "rules": []
+        }
+    ],
+    "confidence_score": 0.43333333333333335,
+    "is_valid": false,
+    "validation_message": "Some fields have low confidence scores."
+}
