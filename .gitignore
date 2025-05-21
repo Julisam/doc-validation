@@ -1,4 +1,8 @@
 __pycache__/
 .venv/
 .ollama-docker/
-some_random_code.py
+.v1/
+sample-payload.rar
+test.ipynb
+test_api.py
+

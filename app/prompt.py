@@ -5,68 +5,66 @@ def engineer_prompt(payload: Dict = None, text: str = None) -> str:
     Generates a strict prompt for the LLM to classify and extract fields from a document.
     The LLM must return structured JSON only, with rules check and confidence evaluations.
     """
-
     prompt = (
         "You are a highly accurate document analysis assistant.\n"
-        "You are given OCR text from a scanned document. The OCR text may contain typos or formatting issues.\n"
-        "Your job is to strictly extract the requested information.\n"
+        "You are given a scanned document image (encoded in base64). The image may include handwritten or printed text and can contain noise, distortions, or formatting inconsistencies.\n"
         "\n"
-        "Do not assume or infer field values. If any value is not clearly found in the text, use 'Unavailable'.\n"
+        "Your task is to visually inspect the image and extract only the text values that are clearly visible. Do not infer missing information or make assumptions.\n"
         "\n"
-        
-        "------START OF DOCUMENT TEXT------\n"
-        f"{text}\n"
-        "------END OF DOCUMENT TEXT------\n\n"
-
-        f"Determine if the document type is: '{payload.DocumentType}' and extract fields from the text.\n"
-        "For each expected field, return:\n"
+        "**Instructions:**\n"
+        "- If a value is not clearly visible in the image, return 'Unavailable'.\n"
+        "- Match the text exactly as it appears.\n"
+        "- Use context from layout, proximity, and labels to identify field values.\n"
+        "\n"
+        f"The expected document type is: '{payload['DocumentType']}'. Your responsibilities are:\n"
+        "1. Identify the actual document type (based on visual clues).\n"
+        "2. Extract each of the expected fields below and evaluate their rules.\n"
+        "\n"
+        "For every field, return:\n"
         "- field_name: The name of the field.\n"
-        "- extracted_value: The exact value found in the OCR text, or 'Unavailable'.\n"
-        "- confidence_score: A float between 0 and 1 representing similarity between extracted value (from OCR text) and the expected value. A score of zeros means that the extracted value is totally different from the expected value and vice versa\n"
-        "- rules_check: List of `{ rule_name: \"pass/fail\" }` (empty list if no rules).\n"
+        "- extracted_value: The exact value found, or 'Unavailable'.\n"
+        "- confidence_score: A float (0.0–1.0) showing how closely the value matches the expected one.\n"
+        "- rules_check: A list of dictionaries like `{ rule_name: 'pass' | 'fail' }`.\n"
         "\n"
-        "Then compute:\n"
-        "- confidence_score: The average of all field-level confidence scores.\n"
-        "- is_valid: true if overall confidence_score >= 0.7, otherwise false.\n"
-        "- validation_message: a short message summarizing the result.\n"
+        "Then compute overall:\n"
+        "- confidence_score: Average of field-level confidence scores.\n"
+        "- is_valid: true if average score ≥ 0.7, otherwise false.\n"
+        "- validation_message: A short summary of the result.\n"
         "\n"
-        "Expected fields and their rules:\n"
+        "Expected fields and rules:\n"
     )
-    # return prompt
 
-    for field in payload.ExpectedFields:
-        prompt += f"- {field.FieldName} <{field.FieldType}>: {field.FieldDescription} ('expected_value':'{field.FormValue}')\n"
-        if field.FieldRules:
-            for field_rule in field.FieldRules:
-                rule_type = field_rule.RuleType
-                desc = field_rule.RuleDescription
-                # for rule_type, desc in rule.items():
-                    # if rule_type != "match_type":
-                prompt += f"    • Rule - '{rule_type}': {desc}\n"
-    # return prompt
+    for field in payload["ExpectedFields"]:
+        prompt += (
+            f"- {field['FieldName']} <{field['FieldType']}>: {field['FieldDescription']} "
+            f"('expected_value': '{field['FormValue']}')\n"
+        )
+        if field.get("FieldRules"):
+            for rule in field["FieldRules"]:
+                prompt += f"    • Rule - '{rule['RuleType']}': {rule['RuleDescription']}\n"
+
     prompt += (
-        "\nReturn ONLY the JSON object in the exact format below:\n"
+        "\nReturn ONLY the JSON object using the format below:\n"
         "{\n"
         "  \"document_type\": \"<inferred_document_type>\",\n"
         "  \"extracted_fields\": [\n"
         "    {\n"
-        "      \"field_name\": \"<field name e.g. FullName>\",\n"
-        "      \"extracted_value\": \"<extracted value or 'Unavailable'>\",\n"
+        "      \"field_name\": \"<field name>\",\n"
+        "      \"extracted_value\": \"<value or 'Unavailable'>\",\n"
         "      \"rules_check\": [\n"
-        "        { \"<rule_name>\": <pass/fail> },\n"
-        "        ...\n"
+        "        { \"<rule_name>\": \"pass\" },\n"
+        "        { \"<rule_name>\": \"fail\" }\n"
         "      ],\n"
-        "      \"confidence_score\": <float between 0 and 1>\n"
+        "      \"confidence_score\": <float>\n"
         "    }\n"
         "  ],\n"
-        "  \"confidence_score\": <average score>,\n"
+        "  \"confidence_score\": <average float>,\n"
         "  \"is_valid\": <true or false>,\n"
         "  \"validation_message\": \"<summary message>\"\n"
         "}\n"
         "\n"
-        "Return JSON only and no other text.\n"
-        "\n"
-
+        "Return a valid JSON only with no additional text.\n"
     )
+
 
     return prompt

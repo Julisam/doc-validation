@@ -1,7 +1,8 @@
 import ollama
 import json
+import requests
 
-def generate_response(prompt):
+def generate_response(prompt, images=None):
     """
     Generates a response from the LLM using the Ollama API.
 
@@ -14,22 +15,25 @@ def generate_response(prompt):
     # Call the Ollama API to generate a response
 
     # Note: Ensure that the Ollama API is running and accessible
-    response = ollama.chat(
-        model="mistral", 
-        messages=[{"role": "user", "content": prompt}]
-        )
+    v_payload = {
+        "model": "llama3.2-vision:11b",
+        "prompt": prompt,
+        "images": images,
+        "stream": False
+    }
 
-    response = response['message']['content']
+    response = requests.post("http://localhost:11434/api/generate", json=v_payload)
+    response = response.json()["response"]
 
-    try :
-        # Attempt to parse the response as JSON
-        response = json.loads(response)
-    except json.JSONDecodeError:
-        # If parsing fails, return the raw response
-        return {
-            "document_type": "unknown",
-            "extracted_fields": {}
-        }
+    # try :
+    #     # Attempt to parse the response as JSON
+    #     response = json.loads(response)
+    # except json.JSONDecodeError:
+    #     # If parsing fails, return the raw response
+    #     return {
+    #         "document_type": "unknown",
+    #         "extracted_fields": {}
+    #     }
 
     return response
 

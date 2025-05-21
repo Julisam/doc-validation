@@ -1,16 +1,16 @@
 # from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi import FastAPI, HTTPException
 import os 
-from typing import Dict, List, Optional
-import base64
+# from typing import Dict, List, Optional
+# import base64
 
 import sys
 sys.path.append(os.getcwd())
 
 # Import text extraction and LLM functions from the modularized app
-from app.extraction import extract_text_from_pdf, extract_text_from_image
+from app.conversion import convert_pdf_to_image
 from app.llm import generate_response
-from app.validation import validate
+# from app.validation import validate
 
 from app.model import DocumentExtractionRequest
 from app.prompt import engineer_prompt
@@ -28,29 +28,22 @@ async def extract_text(payload: DocumentExtractionRequest):
     Returns:
         - JSON object containing:
             - 'document_type': Type of the document (e.g., 'birth_certificate' or 'unknown').
-            - 'fields': Extracted fields if the document is a birth certificate.
+            - 'extracted_fields': Extracted fields if the document is a birth certificate.
         
         Raises:
         - HTTPException with status code 400 if the file type is unsupported.
         - HTTPException with status code 500 if any error occurs during processing.
     """
     try:
-        # # Decode file content from base64
-        # contents = base64.b64decode(payload.FileContent)
         content_type = payload.MimeType
 
-        # Use local file for testing
-        pdf_file = '/Users/jay/projects/doc-validation/ocr_Friendly_birth_cert.pdf'
-        with open(pdf_file, 'rb') as f:
-            contents = f.read()
-
-        
         # Extract text from the document
         if content_type == "image/png":
-            text = extract_text_from_image(contents)
+            payload.FileContent = [payload.FileContent]
 
         elif content_type == "application/pdf":
-            text = extract_text_from_pdf(contents)
+            images = convert_pdf_to_image(payload.FileContent)
+            payload.FileContent = images # take the list of images
 
         # Raise an error if the file type is not supported
         else:
@@ -59,7 +52,7 @@ async def extract_text(payload: DocumentExtractionRequest):
         # return text
     
         # Engineer prompt
-        prompt = engineer_prompt(payload=payload, text=text)
+        prompt = engineer_prompt(payload=payload)
 
         # return(prompt)
 
